@@ -1,0 +1,24 @@
+# Temporary check: does a failed command piped to tee fail the step, with and without pipefail?
+name: pipefail-check
+on: push
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        pipefail: [false, true]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run tests
+        id: tests
+        continue-on-error: true
+        env:
+          PIPEFAIL: ${{ matrix.pipefail }}
+        run: |
+          if [ "$PIPEFAIL" = true ]; then set -o pipefail; fi
+          bash -c 'echo "failed: 1"; exit 1' 2>&1 | tee e2e.log
+      - name: Show outcome
+        run: echo "tests outcome=${{ steps.tests.outcome }}"
+      - name: Mark failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
